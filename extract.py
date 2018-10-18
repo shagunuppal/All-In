@@ -1,5 +1,7 @@
 import numpy as np
 import cv2 as cv
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import math
 from scipy.ndimage import label
@@ -21,12 +23,6 @@ def extract(img):
 
 	min_size = 10 * math.sqrt(w)
 	img_ctr = np.power(img_gray, gamma)
-
-	cv.imshow('img',img_ctr)
-	cv.waitKey(0)
-	cv.destroyAllWindows()
-
-	print('hello')
 
 	maxValue = 0.8 * np.amax(img_ctr)
 	ret, img_bw = cv.threshold(img_ctr, maxValue, 255, cv.THRESH_BINARY)
@@ -70,6 +66,11 @@ def extract(img):
 						line2 = lines(m)
 						if(abs(line1[0][1]-line2[0][1]) < angle and abs(line1[0][0] - line2[0][0]) > min_line_length or norm(line2.point1 - line2.point2) > max_len):
 							pts = [line1.point1, line1.point2, line2.point2, line2.point1]
+
+		plt.imshow(lines, cmap='gray', interpolation='nearest')
+		plt.savefig('img.jpg')
+		print('hello')
+
 
 if (__name__ == '__main__'):
 	img = cv.imread('./card.jpg')
