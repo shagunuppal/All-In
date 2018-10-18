@@ -22,6 +22,12 @@ def extract(img):
 	min_size = 10 * math.sqrt(w)
 	img_ctr = np.power(img_gray, gamma)
 
+	cv.imshow('img',img_ctr)
+	cv.waitKey(0)
+	cv.destroyAllWindows()
+
+	print('hello')
+
 	maxValue = 0.8 * np.amax(img_ctr)
 	ret, img_bw = cv.threshold(img_ctr, maxValue, 255, cv.THRESH_BINARY)
 	L, numL = label(img_bw)
@@ -51,7 +57,19 @@ def extract(img):
 				):
 				borders = cv.dilate(img_closed, kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (1, 1)), iterations = 1) - img_closed
 				lines = cv.HoughLines(borders,1,np.pi/180,150)		
-
+			if(l==0):
+				break
+			edges = cv2.Canny(borders,50,150,apertureSize = 3)
+			lines = cv2.HoughLines(edges,1,np.pi/180,200)
+			max_len = 0
+			pts = np.zeros(4,2)
+			for n in range(lines.shape[1]):
+				line1 = lines(n)
+				for m in range(n+1, lines.shape[1]):
+					if(n!=m):
+						line2 = lines(m)
+						if(abs(line1[0][1]-line2[0][1]) < angle and abs(line1[0][0] - line2[0][0]) > min_line_length or norm(line2.point1 - line2.point2) > max_len):
+							pts = [line1.point1, line1.point2, line2.point2, line2.point1]
 
 if (__name__ == '__main__'):
 	img = cv.imread('./card.jpg')
