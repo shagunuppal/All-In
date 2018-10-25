@@ -9,19 +9,24 @@ def read_gray_image(path):
 	img_gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 	# plt.imshow(img_gray, cmap='gray', interpolation='nearest')
 	# plt.savefig('img.jpg')
+	# plt.close()
 	return img, img_gray
 
 def threshold_otsu_method(img_gray):
 	ret,thresholded_img = cv.threshold(img_gray, 0, 255, cv.THRESH_OTSU)
-	# plt.imshow(thresholded_img, cmap='gray', interpolation='nearest')
-	# plt.savefig('img.jpg')
+	plt.imshow(thresholded_img, cmap='gray', interpolation='nearest')
+	plt.savefig('img_thresholded.jpg')
+	plt.close()
 	return thresholded_img
 
 # canny method
 def extract_contour(thresholded_img):
-	img_edges = cv.Canny(thresholded_img,20,120, apertureSize=3)
+	THRESHOLD_MIN = 10
+	THRESHOLD_MAX = 250
+	img_edges = cv.Canny(thresholded_img, THRESHOLD_MIN, THRESHOLD_MAX)
 	plt.imshow(img_edges, cmap='gray', interpolation='nearest')
 	plt.savefig('img_contour.jpg')
+	plt.close()
 	return img_edges
 	
 def contours(im):
@@ -39,6 +44,7 @@ def contours(im):
 		cv.rectangle(im, (x, y), (x + w, y + h), (200, 0, 0), 2)
 	plt.imshow(im, cmap='gray', interpolation='nearest')
 	plt.savefig('img.jpg')
+	plt.close()
 
 def prob_hough_transform(img, img_edges):
 	minLineLength = 40
@@ -50,6 +56,7 @@ def prob_hough_transform(img, img_edges):
 			cv.line(img,(x1,y1),(x2,y2),(0,255,0),2)
 	plt.imshow(img, cmap='gray', interpolation='nearest')
 	plt.savefig('img.jpg')
+	plt.close()
 
 def hough_transform(img,img_edges):						
 	lines = cv.HoughLines(img_edges,1,np.pi/180,250)
@@ -67,6 +74,25 @@ def hough_transform(img,img_edges):
 			cv.line(img,(x1,y1),(x2,y2),(0,0,255),2)
 	plt.imshow(img, cmap='gray', interpolation='nearest')
 	plt.savefig('img.jpg')
+	plt.close()
+
+def find_rectangle(thresholded_img, img):
+	_, contours, hierarchy = cv.findContours(thresholded_img, 1, 2)
+	cnt = contours[0]
+	M = cv.moments(cnt)
+	cx = int(M['m10']/M['m00'])
+	cy = int(M['m01']/M['m00'])
+	epsilon = 0.1*cv.arcLength(cnt, True)
+	approx = cv.approxPolyDP(cnt, epsilon, True)
+	hull = cv.convexHull(cnt)
+	rect = cv.minAreaRect(cnt)
+	box = cv.boxPoints(rect)
+	box = np.int0(box)
+	im = cv.drawContours(img,[box],0,(0,0,255),2)
+	plt.imshow(img)
+	plt.savefig('img_with_rect.jpg')
+	plt.close()
+
 
 def template_matching():
 	img_rgb = cv.imread('./8.jpg') # opencv reads image in BGR by default.
@@ -90,13 +116,13 @@ def template_matching():
 	img_gray = cv.cvtColor(img_rgb, cv.COLOR_BGR2GRAY) # convert to grayscale
 
 	# detect suit 
-	if(color=='red'):
+	if(color == 'red'):
 		template = cv.imread('./heart_template.jpg',0)
 		w, h = template.shape[::-1]
 		res = cv.matchTemplate(img_gray,template,cv.TM_CCOEFF_NORMED)
 		threshold = 0.95
 		loc = np.where( res >= threshold)
-		if(len(loc)>0):
+		if(len(loc) > 0):
 			suit = 'heart'
 		else:
 			suit = 'diamond'
@@ -106,7 +132,7 @@ def template_matching():
 		res = cv.matchTemplate(img_gray,template,cv.TM_CCOEFF_NORMED)
 		threshold = 0.95
 		loc = np.where( res >= threshold)
-		if(len(loc)>0):
+		if(len(loc) > 0):
 			suit = 'spade'
 		else:
 			suit = 'club'
@@ -118,15 +144,16 @@ def template_matching():
 		cv.rectangle(img_rgb, pt, (pt[0] + w, pt[1] + h), (0,0,255), 2)
 	plt.imshow(img_rgb)
 	plt.savefig('img4.jpg')
+	plt.close()
 
 if (__name__ == '__main__'):
 	#template_matching()
-	image, gray = read_gray_image('./king.jpg')
+	image, gray = read_gray_image('./democard.jpg')
 	thresholded = threshold_otsu_method(gray)
-	edges = extract_contour(thresholded)
+	#edges = extract_contour(thresholded)
 	#edges = contours(thresholded)
 	#prob_hough_transform(image, edges)
 	#hough_transform(image, edges)
-
+	img_with_rect = find_rectangle(thresholded, image)
 
 	
