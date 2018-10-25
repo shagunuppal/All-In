@@ -50,17 +50,15 @@ def prob_hough_transform(img, img_edges):
 	minLineLength = 40
 	maxLineGap = 50
 	lines = cv.HoughLinesP(img_edges,1,np.pi/180,100,minLineLength,maxLineGap)
-	print (len(lines))
 	for n in range(len(lines)):
 		for x1,y1,x2,y2 in lines[n]:
 			cv.line(img,(x1,y1),(x2,y2),(0,255,0),2)
 	plt.imshow(img, cmap='gray', interpolation='nearest')
-	plt.savefig('img.jpg')
+	plt.savefig('img_hough_prob.jpg')
 	plt.close()
 
 def hough_transform(img,img_edges):						
 	lines = cv.HoughLines(img_edges,1,np.pi/180,250)
-	print (len(lines))
 	for n in range(len(lines)):	
 		for rho,theta in lines[n]:
 			a = np.cos(theta)
@@ -73,7 +71,7 @@ def hough_transform(img,img_edges):
 			y2 = int(y0 - 1000*(a))
 			cv.line(img,(x1,y1),(x2,y2),(0,0,255),2)
 	plt.imshow(img, cmap='gray', interpolation='nearest')
-	plt.savefig('img.jpg')
+	plt.savefig('img_hough.jpg')
 	plt.close()
 
 def find_rectangle(thresholded_img, img):
@@ -148,12 +146,12 @@ def template_matching():
 
 if (__name__ == '__main__'):
 	#template_matching()
-	image, gray = read_gray_image('./democard.jpg')
+	image, gray = read_gray_image('./card.jpg')
 	thresholded = threshold_otsu_method(gray)
-	#edges = extract_contour(thresholded)
+	edges = extract_contour(thresholded)
 	#edges = contours(thresholded)
 	#prob_hough_transform(image, edges)
 	#hough_transform(image, edges)
-	img_with_rect = find_rectangle(thresholded, image)
+	#img_with_rect = find_rectangle(thresholded, image)
 
 	
