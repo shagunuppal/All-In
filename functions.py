@@ -91,9 +91,25 @@ def find_rectangle(thresholded_img, img):
 	plt.savefig('img_with_rect.jpg')
 	plt.close()
 
+def determine_rank(extracted_card):
+	#possible_ranks = ['./A_template.jpg', './2_template.jpg', './3_template.jpg', './4_template.jpg', './5_template.jpg', './6_template.jpg', './7_template.jpg', './8_template.jpg', './9_template.jpg', './10_template.jpg', './J_template.jpg''./Q_template.jpg', './K_template.jpg']
+	possible_ranks = ['./3_template.jpg', './8_template.jpg']
+	
+	img_rgb = cv.imread(extracted_card)
+	img_rgb = cv.cvtColor(img_rgb, cv.COLOR_BGR2RGB)
+	img_gray = cv.cvtColor(img_rgb, cv.COLOR_BGR2GRAY)
+	rank_ = 0
+	for i in possible_ranks:
+		rank_ = template_matching_rank(img_gray, img_rgb, i)
+		if(rank_>0):
+			rank = i.split('/')[1].split('_')[0]
+			print('Rank of the card is : ', rank)
+			break
 
-def template_matching():
-	img_rgb = cv.imread('./8.jpg') # opencv reads image in BGR by default.
+
+def determine_suit(extracted_card):
+	possible_suits = ['./heart_template2.jpg', './spade_template.jpg']
+	img_rgb = cv.imread(extracted_card) # opencv reads image in BGR by default.
 	img_rgb = cv.cvtColor(img_rgb, cv.COLOR_BGR2RGB) # convert to standard RGB for matplotlib deafult.
 	
 	# get rgb pixels color count
@@ -112,46 +128,65 @@ def template_matching():
 		color = 'black'
 
 	img_gray = cv.cvtColor(img_rgb, cv.COLOR_BGR2GRAY) # convert to grayscale
+	if(color=='red'):
+		suit = template_matching_suit(img_gray, img_rgb, possible_suits[0], color)
+	elif(color=='black'):
+		suit = template_matching_suit(img_gray, img_rgb, possible_suits[1], color)
 
-	# detect suit 
-	if(color == 'red'):
-		template = cv.imread('./heart_template.jpg',0)
-		w, h = template.shape[::-1]
-		res = cv.matchTemplate(img_gray,template,cv.TM_CCOEFF_NORMED)
-		threshold = 0.95
-		loc = np.where( res >= threshold)
-		if(len(loc) > 0):
-			suit = 'heart'
-		else:
-			suit = 'diamond'
-	else:
-		template = cv.imread('./spade_template.jpg',0)
-		w, h = template.shape[::-1]
-		res = cv.matchTemplate(img_gray,template,cv.TM_CCOEFF_NORMED)
-		threshold = 0.95
-		loc = np.where( res >= threshold)
-		if(len(loc) > 0):
-			suit = 'spade'
-		else:
-			suit = 'club'
+	print('Color of the card is : ', color)
+	print('Suit of the card is : ', suit)
 
+
+def template_matching_suit(image, img_rgb, template_, color):
+	# detect suit
+	suit = 0
+	template = cv.imread(template_,0)
+	w, h = template.shape[::-1]
+	res = cv.matchTemplate(image, template, cv.TM_CCOEFF_NORMED)
+	threshold = 0.75
+	loc = np.where( res >= threshold)
+	if(len(loc[0]) > 0 and color=='red'):
+		suit = 'heart'
+	elif(len(loc[0]) == 0 and color=='red'):
+		suit = 'diamond'
+	elif(len(loc[0]) > 0 and color=='black'):
+		suit = 'spade'
+	elif(len(loc[0]) == 0 and color=='black'):
+		suit = 'club'
+
+	for pt in zip(*loc[::-1]):
+		cv.rectangle(img_rgb, pt, (pt[0] + w, pt[1] + h), (0,0,255), 2)
+	plt.imshow(img_rgb)
+	plt.savefig('img5.jpg')
+	plt.close()
+
+	return suit
+
+def template_matching_rank(image, img_rgb, template_):
 	# detect rank
-
-
+	template = cv.imread(template_,0)
+	w, h = template.shape[::-1]
+	res = cv.matchTemplate(image, template, cv.TM_CCOEFF_NORMED)
+	threshold = 0.95
+	loc = np.where( res >= threshold)
 	for pt in zip(*loc[::-1]):
 		cv.rectangle(img_rgb, pt, (pt[0] + w, pt[1] + h), (0,0,255), 2)
 	plt.imshow(img_rgb)
 	plt.savefig('img4.jpg')
 	plt.close()
 
+	return len(loc[0])
+
+
 if (__name__ == '__main__'):
-	#template_matching()
-	image, gray = read_gray_image('./card.jpg')
-	thresholded = threshold_otsu_method(gray)
-	edges = extract_contour(thresholded)
+	#image, gray = read_gray_image('./card.jpg')
+	#thresholded = threshold_otsu_method(gray)
+	#edges = extract_contour(thresholded)
 	#edges = contours(thresholded)
 	#prob_hough_transform(image, edges)
 	#hough_transform(image, edges)
 	#img_with_rect = find_rectangle(thresholded, image)
+	determine_suit('./8.jpg')
+	determine_rank('./8.jpg')
 
 	
