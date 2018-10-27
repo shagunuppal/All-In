@@ -93,7 +93,7 @@ def find_rectangle(thresholded_img, img):
 
 def determine_rank(extracted_card):
 	#possible_ranks = ['./A_template.jpg', './2_template.jpg', './3_template.jpg', './4_template.jpg', './5_template.jpg', './6_template.jpg', './7_template.jpg', './8_template.jpg', './9_template.jpg', './10_template.jpg', './J_template.jpg''./Q_template.jpg', './K_template.jpg']
-	possible_ranks = ['./3_template.jpg', './8_template.jpg']
+	possible_ranks = ['./2_template.png', './8_template.jpg']
 	
 	img_rgb = cv.imread(extracted_card)
 	img_rgb = cv.cvtColor(img_rgb, cv.COLOR_BGR2RGB)
@@ -143,7 +143,7 @@ def template_matching_suit(image, img_rgb, template_, color):
 	template = cv.imread(template_,0)
 	w, h = template.shape[::-1]
 	res = cv.matchTemplate(image, template, cv.TM_CCOEFF_NORMED)
-	threshold = 0.75
+	threshold = 0.7
 	loc = np.where( res >= threshold)
 	if(len(loc[0]) > 0 and color=='red'):
 		suit = 'heart'
@@ -179,15 +179,15 @@ def template_matching_rank(image, img_rgb, template_):
 
 
 if (__name__ == '__main__'):
-	image, gray = read_gray_image('./card2.jpg')
+	image, gray = read_gray_image('./card.jpg')
 	thresholded = threshold_otsu_method(gray)
 	#find_rectangle(thresholded, image)
 	edges = extract_contour(thresholded)
 	#edges = contours(thresholded)
-	prob_hough_transform(image, edges)
+	#(image, edges)
 	hough_transform(image, edges)
 	#img_with_rect = find_rectangle(thresholded, image)
-	#determine_suit('./8.jpg')
-	#determine_rank('./8.jpg')
+	determine_suit('./2.jpg')
+	determine_rank('./2.jpg')
 
 	
