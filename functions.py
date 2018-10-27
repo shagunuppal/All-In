@@ -58,7 +58,7 @@ def prob_hough_transform(img, img_edges):
 	plt.close()
 
 def hough_transform(img,img_edges):						
-	lines = cv.HoughLines(img_edges,1,np.pi/180,250)
+	lines = cv.HoughLines(img_edges,1,np.pi/180,75)
 	for n in range(len(lines)):	
 		for rho,theta in lines[n]:
 			a = np.cos(theta)
@@ -157,7 +157,7 @@ def template_matching_suit(image, img_rgb, template_, color):
 	for pt in zip(*loc[::-1]):
 		cv.rectangle(img_rgb, pt, (pt[0] + w, pt[1] + h), (0,0,255), 2)
 	plt.imshow(img_rgb)
-	plt.savefig('img5.jpg')
+	plt.savefig('img_with_suit.jpg')
 	plt.close()
 
 	return suit
@@ -172,21 +172,22 @@ def template_matching_rank(image, img_rgb, template_):
 	for pt in zip(*loc[::-1]):
 		cv.rectangle(img_rgb, pt, (pt[0] + w, pt[1] + h), (0,0,255), 2)
 	plt.imshow(img_rgb)
-	plt.savefig('img4.jpg')
+	plt.savefig('img_with_rank.jpg')
 	plt.close()
 
 	return len(loc[0])
 
 
 if (__name__ == '__main__'):
-	#image, gray = read_gray_image('./card.jpg')
-	#thresholded = threshold_otsu_method(gray)
-	#edges = extract_contour(thresholded)
+	image, gray = read_gray_image('./card2.jpg')
+	thresholded = threshold_otsu_method(gray)
+	#find_rectangle(thresholded, image)
+	edges = extract_contour(thresholded)
 	#edges = contours(thresholded)
-	#prob_hough_transform(image, edges)
-	#hough_transform(image, edges)
+	prob_hough_transform(image, edges)
+	hough_transform(image, edges)
 	#img_with_rect = find_rectangle(thresholded, image)
-	determine_suit('./8.jpg')
-	determine_rank('./8.jpg')
+	#determine_suit('./8.jpg')
+	#determine_rank('./8.jpg')
 
 	
