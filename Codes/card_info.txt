@@ -1,0 +1,5 @@
+card2 => no
+card5 => no
+card21 => (img_edges,1,np.pi/2,90), threshold : 0.8
+card24 => no
+card25 => (img_edges,1,np.pi/2,90), threshold : 0.99

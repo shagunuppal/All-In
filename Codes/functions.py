@@ -7,93 +7,154 @@ from matplotlib import pyplot as plt
 def read_gray_image(path):
 	img = cv.imread(path)
 	img_gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-	# plt.imshow(img_gray, cmap='gray', interpolation='nearest')
-	# plt.savefig('img.jpg')
-	# plt.close()
+	plt.imshow(img_gray, cmap='gray', interpolation='nearest')
+	plt.savefig('./results/img_gray.png')
+	plt.close()
 	return img, img_gray
 
 def threshold_otsu_method(img_gray):
 	ret,thresholded_img = cv.threshold(img_gray, 0, 255, cv.THRESH_OTSU)
 	plt.imshow(thresholded_img, cmap='gray', interpolation='nearest')
-	plt.savefig('img_thresholded.jpg')
+	plt.savefig('./results/img_thresholded.png')
 	plt.close()
 	return thresholded_img
 
 # canny method
 def extract_contour(thresholded_img):
-	THRESHOLD_MIN = 10
-	THRESHOLD_MAX = 250
+	THRESHOLD_MIN = 3
+	THRESHOLD_MAX = 30
 	img_edges = cv.Canny(thresholded_img, THRESHOLD_MIN, THRESHOLD_MAX)
 	plt.imshow(img_edges, cmap='gray', interpolation='nearest')
-	plt.savefig('img_contour.jpg')
+	plt.savefig('./results/img_contour.png')
 	plt.close()
 	return img_edges
-	
-def contours(im):
-	BLACK_THRESHOLD = 200
-	THIN_THRESHOLD = 10
-	_, contours, hierarchy = cv.findContours(im, 1, 3)
-	idx = 0
-	for cnt in contours:
-		idx += 1
-		x, y, w, h = cv.boundingRect(cnt)
-		roi = im[y:y + h, x:x + w]
-		if h < THIN_THRESHOLD or w < THIN_THRESHOLD:
-			continue
-		cv.imwrite(str(idx) + '.png', roi)
-		cv.rectangle(im, (x, y), (x + w, y + h), (200, 0, 0), 2)
-	plt.imshow(im, cmap='gray', interpolation='nearest')
-	plt.savefig('img.jpg')
-	plt.close()
 
 def prob_hough_transform(img, img_edges):
-	minLineLength = 40
-	maxLineGap = 50
-	lines = cv.HoughLinesP(img_edges,1,np.pi/180,100,minLineLength,maxLineGap)
+	minLineLength = 10
+	maxLineGap = 35
+	lines = cv.HoughLinesP(img_edges,1,np.pi/180,1,minLineLength,maxLineGap)
+	img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
 	for n in range(len(lines)):
 		for x1,y1,x2,y2 in lines[n]:
-			cv.line(img,(x1,y1),(x2,y2),(0,255,0),2)
-	plt.imshow(img, cmap='gray', interpolation='nearest')
-	plt.savefig('img_hough_prob.jpg')
+			cv.line(img_rgb,(x1,y1),(x2,y2),(0,255,0),2)
+	plt.imshow(img_rgb, cmap='gray', interpolation='nearest')
+	plt.savefig('./results/img_hough_prob.png')
 	plt.close()
 
-def hough_transform(img,img_edges):						
-	lines = cv.HoughLines(img_edges,1,np.pi/180,75)
+def hough_transform(img,img_edges):	
+	line_array = []
+	lines = cv.HoughLines(img_edges,1,np.pi/2,90)
+	img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+	indexes = [0]*len(lines)
+	# to remove lines in extreme proximity, maybe due to the design of the card.
+	# ========================================= preprocessing 
+	for r1 in range(len(lines)):
+		if(indexes[r1]==0):
+			r = lines[r1]
+			for v1 in range(len(lines)):
+				if(indexes[v1]==0):
+					v = lines[v1]
+					if(v1!=r1):
+						if(abs(r[0][0]-v[0][0])<10 and r[0][1]-v[0][1]==0):
+							if(r[0][0]>v[0][0]):
+								indexes[r1] = 1
+							else:
+								indexes[v1] = 1
+	lines1 = []
+	print('Length:', len(lines))
+	for i in range(len(indexes)):
+		if(indexes[i]==0):
+			lines1.append(lines[i])
+	lines = np.asarray(lines1)
+	#print(len(lines))
+	x = img.shape[0]
+	y = img.shape[1]
 	for n in range(len(lines)):	
 		for rho,theta in lines[n]:
 			a = np.cos(theta)
 			b = np.sin(theta)
 			x0 = a*rho
 			y0 = b*rho
-			x1 = int(x0 + 1000*(-b))
-			y1 = int(y0 + 1000*(a))
-			x2 = int(x0 - 1000*(-b))
-			y2 = int(y0 - 1000*(a))
-			cv.line(img,(x1,y1),(x2,y2),(0,0,255),2)
-	plt.imshow(img, cmap='gray', interpolation='nearest')
-	plt.savefig('img_hough.jpg')
+			x1 = round(x0 + y*(-b))
+			y1 = round(y0 + x*(a))
+			x2 = round(x0 - y*(-b))
+			y2 = round(y0 - x*(a))
+			line_array.append([[x1,y1],[x2,y2]])
+			cv.line(img_rgb,((int)(x1),(int)(y1)),((int)(x2),(int)(y2)),(0,0,255),2)
+	plt.imshow(img_rgb, cmap='gray', interpolation='nearest')
+	plt.savefig('./results/img_hough.png')
 	plt.close()
+	print(len(line_array))
+	return line_array
 
-def find_rectangle(thresholded_img, img):
-	_, contours, hierarchy = cv.findContours(thresholded_img, 1, 2)
-	cnt = contours[0]
-	M = cv.moments(cnt)
-	cx = int(M['m10']/M['m00'])
-	cy = int(M['m01']/M['m00'])
-	epsilon = 0.1*cv.arcLength(cnt, True)
-	approx = cv.approxPolyDP(cnt, epsilon, True)
-	hull = cv.convexHull(cnt)
-	rect = cv.minAreaRect(cnt)
-	box = cv.boxPoints(rect)
-	box = np.int0(box)
-	im = cv.drawContours(img,[box],0,(0,0,255),2)
-	plt.imshow(img)
-	plt.savefig('img_with_rect.jpg')
+def find_corners(img, lines):
+	# equation of a line
+	points = []
+	points_1 = []
+	points_2 = []
+	for i in lines:
+		x1, y1 = i[0][0], i[0][1]
+		x2, y2 = i[1][0], i[1][1]
+		for j in lines:
+			if(i!=j):
+				x11, y11 = j[0][0], j[0][1]
+				x12, y12 = j[1][0], j[1][1]
+				if(x1!=x2 and x11!=x12):
+					m1 = ((float)(y2-y1)/(float)((x2-x1)))
+					c1 = y1 - x1*(m1)
+					m2 = ((float)(y12-y11)/(float)((x12-x11)))
+					c2 = y11 - x11*(m2)
+					if(m1!=m2):
+						point_y = (c1*m2 - c2*m1) / (m2-m1)
+						if(m1!=0):
+							point_x = (point_y - c1) / m1
+						else:
+							point_x = (point_y - c2) / m2
+						points.append([point_x, point_y])
+				elif(x1!=x2):
+					m1 = ((float)(y2-y1)/(float)((x2-x1)))
+					c1 = y1 - x1*(m1)
+					point_x = x11
+					point_y = m1*point_x + c1
+					points.append([point_x, point_y])
+					points_1.append([point_x, point_y])
+				elif(x11!=x12):
+					m2 = ((float)(y12-y11)/(float)((x12-x11)))
+					c2 = y11 - x11*(m2)
+					point_x = x1
+					point_y = m2*point_x + c2
+					points.append([point_x, point_y])
+					points_2.append([point_x, point_y])
+					
+	points1 = []
+	pts_1 = []
+	pts_2 = []
+	for i in points:
+		if i not in points1:
+			points1.append(i)
+	for i in points_1:
+		if i not in pts_1:
+			pts_1.append(i)
+	for i in points_2:
+		if i not in pts_2:
+			pts_2.append(i)
+	return points1, pts_1, pts_2
+
+def plot_points(img, points, name):
+	green = [0, 255, 0]
+	img_rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+	x, y = img_rgb.shape[0], img.shape[1]
+	print(len(points))
+	for i in points:
+		if(i[0]<y and i[1]<x):
+			cv.circle(img_rgb,(int(i[0]),int(i[1])),10,(50,0,250),-1) 
+	plt.imshow(img_rgb, cmap='gray', interpolation='nearest')
+	plt.savefig('./results/'+name+'.png')
 	plt.close()
 
 def determine_rank(extracted_card):
-	#possible_ranks = ['./A_template.jpg', './2_template.jpg', './3_template.jpg', './4_template.jpg', './5_template.jpg', './6_template.jpg', './7_template.jpg', './8_template.jpg', './9_template.jpg', './10_template.jpg', './J_template.jpg''./Q_template.jpg', './K_template.jpg']
-	possible_ranks = ['./2_template.png', './8_template.jpg']
+	#possible_ranks = ['./A_template.png', './2_template.png', './3_template.png', './4_template.png', './5_template.png', './6_template.png', './7_template.png', './8_template.png', './9_template.png', './10_template.png', './J_template.png''./Q_template.png', './K_template.png']
+	possible_ranks = ['./2_template.png', './8_template.png']
 	
 	img_rgb = cv.imread(extracted_card)
 	img_rgb = cv.cvtColor(img_rgb, cv.COLOR_BGR2RGB)
@@ -106,21 +167,20 @@ def determine_rank(extracted_card):
 			print('Rank of the card is : ', rank)
 			break
 
-
 def determine_suit(extracted_card):
-	possible_suits = ['./heart_template2.jpg', './spade_template.jpg']
+	red_possible_suits = ['./templates/suits/heart/heart.png', './templates/suits/heart/heart1.png', './templates/suits/heart/heart2.png']
+	black_possible_suits = ['./templates/suits/spade/spade.jpg', './templates/suits/spade/spade1.jpg', './templates/suits/spade/spade2.png']
+
 	img_rgb = cv.imread(extracted_card) # opencv reads image in BGR by default.
 	img_rgb = cv.cvtColor(img_rgb, cv.COLOR_BGR2RGB) # convert to standard RGB for matplotlib deafult.
-	
 	# get rgb pixels color count
 	red = img_rgb[:,:,0]
 	green = img_rgb[:,:,1]
 	blue = img_rgb[:,:,2] 
-
 	red_count = np.sum(red)
 	green_count = np.sum(green)
 	blue_count = np.sum(blue)
-
+	print(red_count, green_count, blue_count)
 	# detecting the color of the card
 	if(red_count>green_count):
 		color = 'red'
@@ -129,37 +189,44 @@ def determine_suit(extracted_card):
 
 	img_gray = cv.cvtColor(img_rgb, cv.COLOR_BGR2GRAY) # convert to grayscale
 	if(color=='red'):
-		suit = template_matching_suit(img_gray, img_rgb, possible_suits[0], color)
+		suit = template_matching_suit(img_gray, img_rgb, red_possible_suits, color)
 	elif(color=='black'):
-		suit = template_matching_suit(img_gray, img_rgb, possible_suits[1], color)
+		suit = template_matching_suit(img_gray, img_rgb, black_possible_suits, color)
 
 	print('Color of the card is : ', color)
 	print('Suit of the card is : ', suit)
 
 
-def template_matching_suit(image, img_rgb, template_, color):
+def template_matching_suit(image, img_rgb, template, color):
 	# detect suit
-	suit = 0
-	template = cv.imread(template_,0)
-	w, h = template.shape[::-1]
-	res = cv.matchTemplate(image, template, cv.TM_CCOEFF_NORMED)
-	threshold = 0.7
-	loc = np.where( res >= threshold)
-	if(len(loc[0]) > 0 and color=='red'):
+	max_length = 0
+	print(template)
+	for template_ in template:
+		suit = 0
+		template = cv.imread(template_,0)
+		print(template.shape)
+		w, h = template.shape[::-1]
+		res = cv.matchTemplate(image, template, cv.TM_CCOEFF_NORMED)
+		threshold = 0.8
+		loc1 = np.where( res >= threshold)
+		if(len(loc1[0])>max_length):
+			max_length = len(loc1[0])
+			loc = loc1
+	if(max_length > 0 and color=='red'):
 		suit = 'heart'
-	elif(len(loc[0]) == 0 and color=='red'):
+	elif(max_length == 0 and color=='red'):
 		suit = 'diamond'
-	elif(len(loc[0]) > 0 and color=='black'):
+	elif(max_length > 0 and color=='black'):
 		suit = 'spade'
-	elif(len(loc[0]) == 0 and color=='black'):
+	elif(max_length == 0 and color=='black'):
 		suit = 'club'
 
-	for pt in zip(*loc[::-1]):
-		cv.rectangle(img_rgb, pt, (pt[0] + w, pt[1] + h), (0,0,255), 2)
-	plt.imshow(img_rgb)
-	plt.savefig('img_with_suit.jpg')
-	plt.close()
-
+	if(max_length!=0):
+		for pt in zip(*loc[::-1]):
+			cv.rectangle(img_rgb, pt, (pt[0] + w, pt[1] + h), (0,0,255), 2)
+		plt.imshow(img_rgb)
+		plt.savefig('img_with_suit.png')
+		plt.close()
 	return suit
 
 def template_matching_rank(image, img_rgb, template_):
@@ -172,22 +239,58 @@ def template_matching_rank(image, img_rgb, template_):
 	for pt in zip(*loc[::-1]):
 		cv.rectangle(img_rgb, pt, (pt[0] + w, pt[1] + h), (0,0,255), 2)
 	plt.imshow(img_rgb)
-	plt.savefig('img_with_rank.jpg')
+	plt.savefig('img_with_rank.png')
 	plt.close()
-
 	return len(loc[0])
 
+def perspective_transform(img,points):
+	# segregate points
+	y = {}
+	y1 = []
+	y2 = []
+	for i in points:
+		if(i[1] not in y.keys()):
+			y[i[1]] = [i]
+		else:
+			y[i[1]].append(i)
+	k = list(y.keys())
+	k.sort()
+	y1 = y[k[0]]
+	y1.sort(key=lambda x: x[0])
+	y2 = y[k[1]]
+	y2.sort(key=lambda x: x[0])
+
+	print(y1)
+	print(y2)
+	index = []
+
+	img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+	if(len(y1)%2==0):
+		loop_increment = 2
+	else:
+		loop_increment = 1 
+	for i in range(0, (int)(len(y1)), loop_increment):
+		if(i<len(y1) and i+1<len(y1)):
+			pts1 = np.float32([y1[i], y2[i], y1[i+1], y2[i+1]])
+			pts2 = np.float32([[0,0],[0, 450],[450, 0],[450,450]])
+			M = cv.getPerspectiveTransform(pts1,pts2)
+			dst = cv.warpPerspective(img,M,(450,450))
+			plt.imshow(dst, cmap='gray', interpolation='nearest')
+			plt.savefig('./results/perspective/'+(str)(i)+'.png')
+			index.append((str)(i))
+			plt.close()
+	return index
 
 if (__name__ == '__main__'):
-	image, gray = read_gray_image('./card.jpg')
+	i = 'C:\\Users\\User\\Desktop\\All-In-master\\Codes\\test_cards\\card13.jpg'
+	image, gray = read_gray_image(i)
 	thresholded = threshold_otsu_method(gray)
-	#find_rectangle(thresholded, image)
 	edges = extract_contour(thresholded)
-	#edges = contours(thresholded)
-	#(image, edges)
-	hough_transform(image, edges)
-	#img_with_rect = find_rectangle(thresholded, image)
-	determine_suit('./2.jpg')
-	determine_rank('./2.jpg')
-
-	
+	lines = hough_transform(image, edges)
+	points, pts_1, pts_2 = find_corners(image, lines)
+	#prob_hough_transform(image, edges)
+	plot_points(image, points, 'points')
+	index = perspective_transform(image, points)
+	for i in index:
+		determine_suit('./results/perspective/'+i+'.png')
+		#determine_rank('./2.png')
